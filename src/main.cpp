@@ -29,7 +29,7 @@ size_t file_count;
 
 void print_template() {
     std::cout << "Result file name:\n\n\n";
-    std::cout << "File name:\n\nMetaArtist:\n\nMetaTitle:\n\nMetaAlbum (will be deleted):\n\nMetaYear:\n\nMetaGenre (will be deleted):\n\nMetaComment (will be deleted):\n\n\nArtist:\n\nTitle:\n\nFeatures:\n\nMod:\n\n" << std::flush;
+    std::cout << "File name:\n\nMetaArtist:\n\nMetaTitle:\n\nMetaAlbum (will be deleted):\n\nMetaYear:\n\nMetaGenre (will be deleted):\n\nMetaComment (will be deleted):\n\n\nArtist:\n\nTitle:\n\nFeaturing:\n\nMod:\n\n" << std::flush;
     std::cout << "\nK?\n\n";
 }
 
