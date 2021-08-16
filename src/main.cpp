@@ -29,7 +29,7 @@ size_t file_count;
 
 void print_template() {
     std::cout << "Result file name:\n\n\n";
-    std::cout << "File name:\n\nMetaArtist:\n\nMetaTitle:\n\nMetaAlbum (will be deleted):\n\nMetaYear:\n\nMetaGenre:\n\nMetaComment (will be deleted):\n\n\nArtist:\n\nTitle:\n\nFeatures:\n\nMod:\n\n" << std::flush;
+    std::cout << "File name:\n\nMetaArtist:\n\nMetaTitle:\n\nMetaAlbum (will be deleted):\n\nMetaYear:\n\nMetaGenre (will be deleted):\n\nMetaComment (will be deleted):\n\n\nArtist:\n\nTitle:\n\nFeatures:\n\nMod:\n\n" << std::flush;
     std::cout << "\nK?\n\n";
 }
 
@@ -112,7 +112,12 @@ void edit_song_entry(SongEntry& song_entry, auto entry) {
         } else if (responce == "t") {
             song_entry.title = get_edited_song_field(9);
         } else if (responce == "f") {
-            song_entry.features = {get_edited_song_field(7)};
+            auto new_features = get_edited_song_field(7);
+            if (new_features.empty()) {
+                song_entry.features = {};
+            } else {
+                song_entry.features = {new_features};
+            }
         } else if (responce == "m") {
             song_entry.mod = get_edited_song_field(5);
         } else if (responce == "q") {
@@ -213,6 +218,7 @@ std::string apply_entry(SongEntry& song_entry, auto entry) {
     tag_entry.tag()->setTitle(title_ss.str());
     tag_entry.tag()->setComment("");
     tag_entry.tag()->setAlbum("");
+    tag_entry.tag()->setGenre("");
 
     tag_entry.save();
     auto new_entry = entry;
