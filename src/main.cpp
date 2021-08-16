@@ -9,7 +9,9 @@
 #include <experimental/iterator>
 
 #include <tag.h>
+#include <mpegfile.h>
 #include <fileref.h>
+#include <id3v2tag.h>
 
 struct SongEntry {
     std::string artist;
@@ -175,13 +177,14 @@ void parse_name(SongEntry& song_entry, auto entry) {
 }
 
 void load_metadata(SongEntry& song_entry, auto entry) {
-    TagLib::FileRef tag_entry(entry.path().c_str());
-    song_entry.meta_artist = tag_entry.tag()->artist().toCString();
-    song_entry.meta_title = tag_entry.tag()->title().toCString();
-    song_entry.meta_genre = tag_entry.tag()->genre().toCString();
-    song_entry.meta_album = tag_entry.tag()->album().toCString();
-    song_entry.meta_year = tag_entry.tag()->year();
-    song_entry.meta_comment = tag_entry.tag()->comment().toCString();
+    TagLib::MPEG::File file_entry(entry.path().c_str());
+    TagLib::ID3v2::Tag &tag_entry = *file_entry.ID3v2Tag();
+    song_entry.meta_artist = std::string(tag_entry.artist().data(TagLib::String::Type::UTF8).data(), tag_entry.artist().data(TagLib::String::Type::UTF8).size());
+    song_entry.meta_title = std::string(tag_entry.title().data(TagLib::String::Type::UTF8).data(), tag_entry.title().data(TagLib::String::Type::UTF8).size());
+    song_entry.meta_genre = std::string(tag_entry.genre().data(TagLib::String::Type::UTF8).data(), tag_entry.genre().data(TagLib::String::Type::UTF8).size());
+    song_entry.meta_album = std::string(tag_entry.album().data(TagLib::String::Type::UTF8).data(), tag_entry.album().data(TagLib::String::Type::UTF8).size());
+    song_entry.meta_comment = std::string(tag_entry.comment().data(TagLib::String::Type::UTF8).data(), tag_entry.comment().data(TagLib::String::Type::UTF8).size());
+    song_entry.meta_year = tag_entry.year();
 }
 
 SongEntry load_data(auto entry) {
@@ -203,7 +206,9 @@ void load_cache() {
 }
 
 std::string apply_entry(SongEntry& song_entry, auto entry) {
-    TagLib::FileRef tag_entry(entry.path().c_str());
+    TagLib::FileRef file_entry(entry.path().c_str());
+    TagLib::Tag &tag_entry = *file_entry.tag();
+
     std::stringstream name_ss;
     name_ss << song_entry.artist; 
     if (song_entry.featuring.size()) {
@@ -211,19 +216,20 @@ std::string apply_entry(SongEntry& song_entry, auto entry) {
         std::copy(song_entry.featuring.begin(), song_entry.featuring.end(), std::experimental::make_ostream_joiner(name_ss, ", "));
     }
 
-    tag_entry.tag()->setArtist(name_ss.str());
+    tag_entry.setArtist(TagLib::String(name_ss.str(), TagLib::String::Type::UTF8));
 
     std::stringstream title_ss;
     title_ss << song_entry.title;
     if (song_entry.mod.size()) {
         title_ss << " (" +song_entry.mod + ")";
     }
-    tag_entry.tag()->setTitle(title_ss.str());
-    tag_entry.tag()->setComment("");
-    tag_entry.tag()->setAlbum("");
-    tag_entry.tag()->setGenre("");
 
-    tag_entry.save();
+    tag_entry.setTitle(TagLib::String(title_ss.str(), TagLib::String::Type::UTF8));
+    tag_entry.setComment("");
+    tag_entry.setAlbum("");
+    tag_entry.setGenre("");
+
+    file_entry.save();
     auto new_entry = entry;
     new_entry.replace_filename(name_ss.str() + " - " + title_ss.str() + ".mp3");
     std::filesystem::rename(entry, new_entry);
