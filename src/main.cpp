@@ -131,7 +131,7 @@ void edit_song_entry(SongEntry& song_entry, auto entry) {
 }
 
 std::vector<std::string> extract_featuring(const std::smatch& match, unsigned place) {
-    const static std::regex featuring_regex(R"(((\bfeat\. |\bft\. |\bwith |, )(.+?)(?=\bfeat\. |\bft\. |\bwith |, |$))+?)");
+    const static std::regex featuring_regex(R"(((\bfeat\. |\bft\. |\bwith |, )(.+?) ?(?=\bfeat\. |\bft\. |\bwith |, |$))+?)");
     std::vector<std::string> featuring;
 
     if (match[place].length()) {
