@@ -4,6 +4,9 @@ MP3Cleaner: src/main.cpp
 run: MP3Cleaner
 	./MP3Cleaner
 
+debug: MP3Cleaner
+	gdb MP3Cleaner
+
 install:
 	git clone https://github.com/taglib/taglib
 	cd taglib; \
