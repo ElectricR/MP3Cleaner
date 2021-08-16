@@ -26,7 +26,6 @@ struct SongEntry {
 
 std::unordered_set<std::string> progressed_files;
 size_t file_count;
-size_t current_file = 1;
 
 void print_template() {
     std::cout << "Result file name:\n\n\n";
@@ -76,7 +75,7 @@ void print_result_file_name(SongEntry& song_entry) {
 }
 
 void print_counter() {
-    std::cout << "\033[A[" << current_file << "/" << file_count << "]" << std::endl;
+    std::cout << "\033[A[" << progressed_files.size() + 1 << "/" << file_count << "]" << std::endl;
 }
 
 void edit_song_entry(SongEntry& song_entry, auto entry) {
@@ -193,7 +192,7 @@ void load_cache() {
     }
 }
 
-void apply_entry(SongEntry& song_entry, auto entry) {
+std::string apply_entry(SongEntry& song_entry, auto entry) {
     TagLib::FileRef tag_entry(entry.path().c_str());
     std::stringstream name_ss;
     name_ss << song_entry.artist; 
@@ -217,6 +216,7 @@ void apply_entry(SongEntry& song_entry, auto entry) {
     auto new_entry = entry;
     new_entry.replace_filename(name_ss.str() + " - " + title_ss.str() + ".mp3");
     std::filesystem::rename(entry, new_entry);
+    return new_entry.path().stem().string();
 }
 
 int main() {
@@ -231,11 +231,13 @@ int main() {
 
     print_template();
     for (const auto& entry : std::filesystem::recursive_directory_iterator("Music")) {
-        if (entry.is_regular_file()) {
+        if (entry.is_regular_file() && !progressed_files.contains(entry.path().stem().string())) {
             SongEntry song_entry = load_data(entry);
             edit_song_entry(song_entry, entry);
-            apply_entry(song_entry, entry);
-            ++current_file;
+            auto result = apply_entry(song_entry, entry);   
+            progressed_files.insert(result);
+            cache << result << std::endl;
+            cache.flush();
         }
     }
 
