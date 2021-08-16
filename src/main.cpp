@@ -14,7 +14,7 @@
 struct SongEntry {
     std::string artist;
     std::string title;
-    std::vector<std::string> features;
+    std::vector<std::string> featuring;
     std::string mod;
     std::string meta_artist;
     std::string meta_title;
@@ -54,9 +54,9 @@ void print_result_file_name(SongEntry& song_entry) {
     }
     std::cout << "\33[2K\t";
     std::cout << song_entry.artist;
-    if (song_entry.features.size()) {
+    if (song_entry.featuring.size()) {
         std::cout << " feat. ";
-        std::copy(song_entry.features.begin(), song_entry.features.end(), std::experimental::make_ostream_joiner(std::cout, ", "));
+        std::copy(song_entry.featuring.begin(), song_entry.featuring.end(), std::experimental::make_ostream_joiner(std::cout, ", "));
     }
 
     std::cout << " - ";
@@ -95,7 +95,7 @@ void edit_song_entry(SongEntry& song_entry, auto entry) {
     std::cout << "\t\33[2K" << song_entry.artist << std::endl << std::endl;    
     std::cout << "\t\33[2K" << song_entry.title << std::endl << std::endl;    
     std::cout << "\t\33[2K";
-    std::copy(song_entry.features.begin(), song_entry.features.end(), std::experimental::make_ostream_joiner(std::cout, ", "));
+    std::copy(song_entry.featuring.begin(), song_entry.featuring.end(), std::experimental::make_ostream_joiner(std::cout, ", "));
     std::cout << std::endl << std::endl;    
     std::cout << "\t\33[2K" << song_entry.mod << std::endl;    
     std::cout << "\n\n\t" << std::flush;
@@ -112,11 +112,11 @@ void edit_song_entry(SongEntry& song_entry, auto entry) {
         } else if (responce == "t") {
             song_entry.title = get_edited_song_field(9);
         } else if (responce == "f") {
-            auto new_features = get_edited_song_field(7);
-            if (new_features.empty()) {
-                song_entry.features = {};
+            auto new_featuring = get_edited_song_field(7);
+            if (new_featuring.empty()) {
+                song_entry.featuring = {};
             } else {
-                song_entry.features = {new_features};
+                song_entry.featuring = {new_featuring};
             }
         } else if (responce == "m") {
             song_entry.mod = get_edited_song_field(5);
@@ -130,45 +130,45 @@ void edit_song_entry(SongEntry& song_entry, auto entry) {
     }
 }
 
-std::vector<std::string> extract_features(const std::smatch& match, unsigned place) {
-    const static std::regex features_regex(R"(((\bfeat\. |\bft\. |\bwith |, )(.+?)(?=\bfeat\. |\bft\. |\bwith |, |$))+?)");
-    std::vector<std::string> features;
+std::vector<std::string> extract_featuring(const std::smatch& match, unsigned place) {
+    const static std::regex featuring_regex(R"(((\bfeat\. |\bft\. |\bwith |, )(.+?)(?=\bfeat\. |\bft\. |\bwith |, |$))+?)");
+    std::vector<std::string> featuring;
 
     if (match[place].length()) {
         std::string match_str = match[place].str();
-        auto it = std::sregex_iterator(match_str.begin(), match_str.end(), features_regex);
+        auto it = std::sregex_iterator(match_str.begin(), match_str.end(), featuring_regex);
         for (; it != std::sregex_iterator{}; ++it) {
             auto it_str = (*it)[3].str();
-            if (it_str.length()) features.push_back(std::move(it_str));
+            if (it_str.length()) featuring.push_back(std::move(it_str));
         }
     }
-    return features;
+    return featuring;
 }
 
 void parse_name(SongEntry& song_entry, auto entry) {
     const static std::regex base_song_regex(R"(^(.+?) ?((\bfeat\. |\bft\. |, )(.+))?( (?:–|-) )(.+?)( ?\((.+)\))?$)");
-    const static std::regex features_detection(R"(^(feat\. |ft\. |with |, ).+)");
+    const static std::regex featuring_detection(R"(^(feat\. |ft\. |with |, ).+)");
 
     std::string entry_name = entry.path().stem().string();
 
-    std::vector<std::string> features;
+    std::vector<std::string> featuring;
     std::string song_mod;
     std::smatch match;
 
     if (std::regex_match(entry_name, match, base_song_regex)) {
-        features = extract_features(match, 2);
-        if (match[8].length() && !std::regex_match(match[8].str(), features_detection)) {
+        featuring = extract_featuring(match, 2);
+        if (match[8].length() && !std::regex_match(match[8].str(), featuring_detection)) {
             song_mod = match[8].str();
         }
         else {
-            std::ranges::copy(extract_features(match, 8), std::back_inserter(features));
+            std::ranges::copy(extract_featuring(match, 8), std::back_inserter(featuring));
         }
     }
 
     song_entry.artist = match[1];
     song_entry.title = match[6];
     song_entry.mod = std::move(song_mod);
-    song_entry.features = std::move(features);
+    song_entry.featuring = std::move(featuring);
 }
 
 void load_metadata(SongEntry& song_entry, auto entry) {
@@ -203,9 +203,9 @@ std::string apply_entry(SongEntry& song_entry, auto entry) {
     TagLib::FileRef tag_entry(entry.path().c_str());
     std::stringstream name_ss;
     name_ss << song_entry.artist; 
-    if (song_entry.features.size()) {
+    if (song_entry.featuring.size()) {
         name_ss << " feat. ";
-        std::copy(song_entry.features.begin(), song_entry.features.end(), std::experimental::make_ostream_joiner(name_ss, ", "));
+        std::copy(song_entry.featuring.begin(), song_entry.featuring.end(), std::experimental::make_ostream_joiner(name_ss, ", "));
     }
 
     tag_entry.tag()->setArtist(name_ss.str());
