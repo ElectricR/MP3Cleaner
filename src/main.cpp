@@ -43,7 +43,7 @@ std::string get_edited_song_field(int upper_shift) {
     for (int i = 0; i != upper_shift - 3; ++i) {
         std::cout << "\n";
     }
-    std::cout << "\t";
+    std::cout << "\33[2K\t";
     
     return field;
 }
