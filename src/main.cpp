@@ -115,6 +115,8 @@ void edit_song_entry(SongEntry& song_entry, auto entry) {
             song_entry.features = {get_edited_song_field(7)};
         } else if (responce == "m") {
             song_entry.mod = get_edited_song_field(5);
+        } else if (responce == "q") {
+            std::exit(0);
         } else if (responce == "") {
             break;
         } else {
