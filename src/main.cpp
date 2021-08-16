@@ -91,7 +91,10 @@ void edit_song_entry(SongEntry& song_entry, auto entry) {
     std::cout << "\t\33[2K" << song_entry.meta_album << std::endl << std::endl;    
     std::cout << "\t\33[2K" << song_entry.meta_year << std::endl << std::endl;    
     std::cout << "\t\33[2K" << song_entry.meta_genre << std::endl << std::endl;    
-    std::cout << "\t\33[2K" << song_entry.meta_comment << std::endl << std::endl << std::endl;    
+    std::string meta_comment_string = song_entry.meta_comment;
+    std::ranges::replace(meta_comment_string, '\n', ' ');
+    std::ranges::replace(meta_comment_string, '\r', ' ');
+    std::cout << "\t\33[2K" << meta_comment_string << std::endl << std::endl << std::endl;    
     std::cout << "\t\33[2K" << song_entry.artist << std::endl << std::endl;    
     std::cout << "\t\33[2K" << song_entry.title << std::endl << std::endl;    
     std::cout << "\t\33[2K";
