@@ -146,7 +146,7 @@ std::vector<std::string> extract_features(const std::smatch& match, unsigned pla
 }
 
 void parse_name(SongEntry& song_entry, auto entry) {
-    const static std::regex base_song_regex(R"(^(.+?) ?((\bfeat\. |\bft\. |, )(.+))?( - )(.+?)( ?\((.+)\))?$)");
+    const static std::regex base_song_regex(R"(^(.+?) ?((\bfeat\. |\bft\. |, )(.+))?( (?:–|-) )(.+?)( ?\((.+)\))?$)");
     const static std::regex features_detection(R"(^(feat\. |ft\. |with |, ).+)");
 
     std::string entry_name = entry.path().stem().string();
