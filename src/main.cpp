@@ -8,10 +8,10 @@
 #include <regex>
 #include <experimental/iterator>
 
-#include <tag.h>
-#include <mpegfile.h>
-#include <fileref.h>
-#include <id3v2tag.h>
+#include <taglib/tag.h>
+#include <taglib/mpegfile.h>
+#include <taglib/fileref.h>
+#include <taglib/id3v2tag.h>
 
 struct SongEntry {
     std::string artist;
@@ -26,8 +26,41 @@ struct SongEntry {
     std::string meta_comment;
 };
 
-std::unordered_set<std::string> progressed_files;
-size_t file_count;
+const std::string CACHE_FILE = "/tmp/MP3CleanerCache";
+const std::string MUSIC_DIR = "music";
+
+std::unordered_set<std::string> processed_files;
+
+void check_music_dir() {
+    if (!std::filesystem::exists(MUSIC_DIR)) {
+        std::cout << "'music' directory is not present, aborting" << std::endl;
+        exit(1);
+    }
+    std::cout << "'music' directory found" << std::endl;
+}
+
+void load_cache() {
+    std::ifstream cache(CACHE_FILE);
+    
+    if (cache) {
+        std::cout << "Looking up cache..." << std::endl;
+        for (std::string line; std::getline(cache, line); ) {
+            processed_files.insert(line);
+            std::cout << "Found in cache, skipping: " << line << std::endl;
+        }
+    }
+}
+
+int calc_mp3_count() {
+    int file_count = 0;
+    for (const auto& entry : std::filesystem::recursive_directory_iterator(MUSIC_DIR)) {
+        if (entry.is_regular_file() && entry.path().extension() == ".mp3") {
+            ++file_count;
+        }
+    }
+    return file_count;
+}
+
 
 void print_template() {
     std::cout << "Result file name:\n\n\n";
@@ -76,13 +109,14 @@ void print_result_file_name(SongEntry& song_entry) {
     std::cout << "\t";
 }
 
-void print_counter() {
-    std::cout << "\033[A[" << progressed_files.size() + 1 << "/" << file_count << "]" << std::endl;
+void print_counter(int file_count) {
+    std::cout << "\033[A[" << processed_files.size() + 1 << "/" << file_count << "]" << std::endl;
 }
 
-void edit_song_entry(SongEntry& song_entry, auto entry) {
+
+void edit_song_entry(SongEntry& song_entry, auto entry, int file_count) {
     // std::format waiting room
-    std::string responce;
+    std::string response;
 
     for (int i = 0; i != 25; ++i) {
         std::cout << "\033[F";
@@ -105,35 +139,36 @@ void edit_song_entry(SongEntry& song_entry, auto entry) {
     std::cout << "\t\33[2K" << song_entry.mod << std::endl;    
     std::cout << "\n\n\t" << std::flush;
 
-    print_counter();
+    print_counter(file_count);
 
     while (true) {
         print_result_file_name(song_entry);
     
-        std::getline(std::cin, responce);
+        std::getline(std::cin, response);
 
-        if (responce == "a") {
+        if (response == "a") {
             song_entry.artist = get_edited_song_field(11);
-        } else if (responce == "t") {
+        } else if (response == "t") {
             song_entry.title = get_edited_song_field(9);
-        } else if (responce == "f") {
+        } else if (response == "f") {
             auto new_featuring = get_edited_song_field(7);
             if (new_featuring.empty()) {
                 song_entry.featuring = {};
             } else {
                 song_entry.featuring = {new_featuring};
             }
-        } else if (responce == "m") {
+        } else if (response == "m") {
             song_entry.mod = get_edited_song_field(5);
-        } else if (responce == "q") {
+        } else if (response == "q") {
             std::exit(0);
-        } else if (responce == "") {
+        } else if (response == "") {
             break;
         } else {
             std::cout << "\033[F\33[2K\t";
         }
     }
 }
+
 
 std::vector<std::string> extract_featuring(const std::smatch& match, unsigned place) {
     const static std::regex featuring_regex(R"(((\b[fF]eat\. |\b[fF]t\. |\bwith |, )(.+?) ?(?=\b[fF]eat\. |\b[fF]t\. |\bwith |, |$))+?)");
@@ -149,6 +184,7 @@ std::vector<std::string> extract_featuring(const std::smatch& match, unsigned pl
     }
     return featuring;
 }
+
 
 void parse_name(SongEntry& song_entry, auto entry) {
     const static std::regex base_song_regex(R"(^(.+?) ?((\b[fF]eat\. |\b[fF]t\. |, )(.+))?( (?:–|-) )(.+?)( ?\((.+)\))?$)");
@@ -176,6 +212,7 @@ void parse_name(SongEntry& song_entry, auto entry) {
     song_entry.featuring = std::move(featuring);
 }
 
+
 void load_metadata(SongEntry& song_entry, auto entry) {
     TagLib::MPEG::File file_entry(entry.path().c_str());
     TagLib::ID3v2::Tag &tag_entry = *file_entry.ID3v2Tag();
@@ -187,6 +224,7 @@ void load_metadata(SongEntry& song_entry, auto entry) {
     song_entry.meta_year = tag_entry.year();
 }
 
+
 SongEntry load_data(auto entry) {
     SongEntry song_entry {};
     parse_name(song_entry, entry);
@@ -194,16 +232,6 @@ SongEntry load_data(auto entry) {
     return song_entry;
 }
 
-void load_cache() {
-    std::ifstream cache(std::filesystem::current_path()/"MP3CleanerCache");
-    
-    if (cache) {
-        for (std::string line; std::getline(cache, line); ) {
-            progressed_files.insert(line);
-            std::cout << line << std::endl;
-        }
-    }
-}
 
 std::string apply_entry(SongEntry& song_entry, auto entry) {
     TagLib::FileRef file_entry(entry.path().c_str());
@@ -236,27 +264,25 @@ std::string apply_entry(SongEntry& song_entry, auto entry) {
     return new_entry.path().stem().string();
 }
 
-int main() {
-    load_cache();
-
-    std::ofstream cache (std::filesystem::current_path()/"MP3CleanerCache", std::ios_base::app);
-    for (const auto& entry : std::filesystem::recursive_directory_iterator("Music")) {
-        if (entry.is_regular_file()) {
-            ++file_count;
-        }
-    }
-
+void run_cleaner(int file_count) {
+    std::ofstream cache (CACHE_FILE, std::ios_base::app);
     print_template();
-    for (const auto& entry : std::filesystem::recursive_directory_iterator("Music")) {
-        if (entry.is_regular_file() && !progressed_files.contains(entry.path().stem().string())) {
+    for (const auto& entry : std::filesystem::recursive_directory_iterator(MUSIC_DIR)) {
+        if (entry.is_regular_file() && !processed_files.contains(entry.path().stem().string())) {
             SongEntry song_entry = load_data(entry);
-            edit_song_entry(song_entry, entry);
+            edit_song_entry(song_entry, entry, file_count);
             auto result = apply_entry(song_entry, entry);   
-            progressed_files.insert(result);
+            processed_files.insert(result);
             cache << result << std::endl;
             cache.flush();
         }
     }
+}
 
+int main() {
+    check_music_dir();
+    load_cache();
+    int file_count = calc_mp3_count();
+    run_cleaner(file_count);
     return 0;
 }
