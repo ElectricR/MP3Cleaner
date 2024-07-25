@@ -8,4 +8,4 @@ debug: MP3Cleaner
 	gdb MP3Cleaner
 
 install:
-	sudo pacman -S taglib
+	sudo pacman -S taglib1
